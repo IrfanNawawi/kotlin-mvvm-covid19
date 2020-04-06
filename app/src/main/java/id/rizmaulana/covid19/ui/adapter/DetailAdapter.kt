@@ -6,33 +6,66 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import id.rizmaulana.covid19.R
 import id.rizmaulana.covid19.data.model.CovidDetail
+import id.rizmaulana.covid19.databinding.ItemLocationBinding
 import id.rizmaulana.covid19.util.CaseType
 import id.rizmaulana.covid19.util.NumberUtils
-import kotlinx.android.synthetic.main.item_location.view.*
+import id.rizmaulana.covid19.util.ext.visible
 
 
 /**
  * rizmaulana 2020-02-06.
  */
-class DetailAdapter(val caseType: Int, val clicked: (data: CovidDetail)-> Unit) : RecyclerView.Adapter<DetailAdapter.ViewHolder>() {
-    val items = mutableListOf<CovidDetail>()
+class DetailAdapter(
+    val caseType: Int,
+    val clicked: (data: CovidDetail) -> Unit,
+    val longClicked: (data: CovidDetail) -> Unit
+) : RecyclerView.Adapter<DetailAdapter.ViewHolder>() {
 
+    private val items = mutableListOf<CovidDetail>()
 
     inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
 
-        fun bind(item: CovidDetail) {
-            with(itemView) {
-                txt_information.text = "Last update ${NumberUtils.formatTime(item.lastUpdate)}"
-                txt_location.text = item.locationName
+        private var binding: ItemLocationBinding = ItemLocationBinding.bind(itemView)
 
-                txt_data.setTextColor(resources.getColor(getColor(caseType)))
-                txt_data.text = when (caseType) {
-                    CaseType.DEATHS -> "Deaths ${NumberUtils.numberFormat(item.deaths)}"
-                    CaseType.RECOVERED -> "Recovered ${NumberUtils.numberFormat(item.recovered)}"
-                    else -> "Confirmed ${NumberUtils.numberFormat(item.confirmed)}"
+        fun bind(item: CovidDetail) {
+            with(binding) {
+                root.context?.let {
+                    txtInformation.text = it.getString(
+                        R.string.information_last_update,
+                        NumberUtils.formatTime(item.lastUpdate)
+                    )
+                    txtLocation.text = item.locationName
+
+                    txtData.text = it.getString(
+                        R.string.confirmed_case_count,
+                        NumberUtils.numberFormat(item.confirmed)
+                    )
+                    txtRcv.text = it.getString(
+                        R.string.recovered_case_count,
+                        NumberUtils.numberFormat(item.recovered)
+                    )
+                    txtDeath.text = it.getString(
+                        R.string.death_case_count,
+                        NumberUtils.numberFormat(item.deaths)
+                    )
                 }
 
-                setOnClickListener { clicked.invoke(item) }
+                when (caseType) {
+                    CaseType.CONFIRMED -> txtData.visible()
+                    CaseType.RECOVERED -> txtRcv.visible()
+                    CaseType.DEATHS -> txtDeath.visible()
+                    else -> {
+                        txtData.visible()
+                        txtRcv.visible()
+                        txtDeath.visible()
+                    }
+                }
+
+                root.setOnClickListener { clicked.invoke(item) }
+                root.setOnLongClickListener {
+                    longClicked.invoke(item)
+                    true
+                }
             }
         }
 
@@ -41,7 +74,6 @@ class DetailAdapter(val caseType: Int, val clicked: (data: CovidDetail)-> Unit) 
             CaseType.RECOVERED -> R.color.color_recovered
             else -> R.color.color_confirmed
         }
-
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = ViewHolder(
